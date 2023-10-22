@@ -16,7 +16,7 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 # Alamat broker MQTT
-broker_address = "broker.hivemq.com"  # Ganti dengan alamat broker MQTT yang sesuai
+broker_address = "mqtt.eclipseprojects.io"  # Ganti dengan alamat broker MQTT yang sesuai
 
 # Koneksi ke broker MQTT
 client.connect(broker_address, 1883, 60)
