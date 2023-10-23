@@ -10,29 +10,30 @@ def clear():
     else:
         os.system('clear')
 
-def connectMqtt():
-    def on_connect(client, userdata, flags, rc):
-        print("Connected with result code " + str(rc))
-        _ = input('->')
-        print(_)
+class Mqtt():
+    def __init__(self):
+        self.mqtt_server = "mqtt.eclipseprojects.io"
+        self.mqtt_payload = ""
+        self.mqtt_topic = ""
+        self.client = mqtt.Client(f"Klien-{random.randint(1, 999)}")
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.client.on_unsubscribe = self.on_unsubscribe
         
-    def on_message(client, userdata, msg):
+    def on_connect(self, client, userdata, flags, rc):
+        print("Connected with result code " + str(rc))
+        
+    def on_message(self, client, userdata, msg):
         pesan = str(msg.payload.decode('utf-8'))
         print("Received message on topic '" + msg.topic + "': " + pesan)
 
-    def on_unsubscribe(client, userdata, mid):
+    def on_unsubscribe(self, client, userdata, mid):
         print("Unsubscribed from topic")
 
-    mqtt_server = "mqtt.eclipseprojects.io"
-    mqtt_payload = ""
-    mqtt_topic = ""
-    client = mqtt.Client(f"Klien-{random.randint(1, 999)}")
-
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.on_unsubscribe = on_unsubscribe
-    client.connect(mqtt_server, 1883, 60)
-    client.loop_start()
+    def run(self):
+        self.client.connect(self.mqtt_server, 1883, 60)
+        self.client.loop_start()
 
 if __name__ == "__main__":
-    connectMqtt()
+    klien = Mqtt()
+    klien.run()
