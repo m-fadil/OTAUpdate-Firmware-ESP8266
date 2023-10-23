@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import time
 
-mqtt_server = "broker.emqx.io"  # Ganti dengan alamat broker MQTT yang Anda gunakan
+mqtt_server = "mqtt.eclipseprojects.io"  # Ganti dengan alamat broker MQTT yang Anda gunakan
 mqtt_topic = "update1111"
 mqtt_payload = "Pesan dari Python"
 
