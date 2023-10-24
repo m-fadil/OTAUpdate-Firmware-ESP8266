@@ -19,7 +19,6 @@ class Klien():
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_unsubscribe = self.on_unsubscribe
-        self.connected = False
         self.onESP = []
 
     def on_connect(self, client, userdata, flags, rc):
