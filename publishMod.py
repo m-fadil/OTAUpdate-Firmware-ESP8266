@@ -1,32 +1,69 @@
 import paho.mqtt.client as mqtt
-import time
+import random
+import os
 import sys
+import platform
+import time
+import threading
 
-mqtt_server = "mqtt.eclipseprojects.io"  # Ganti dengan alamat broker MQTT yang Anda gunakan
-mqtt_topic = "update1111"
-mqtt_payload = "Pesan dari Python"
-
-def on_connect(client, userdata, flags, rc):
-    print("Connected with result code " + str(rc))
-    
-client = mqtt.Client()
-client.on_connect = on_connect
-
-client.connect(mqtt_server, 1883, 60)
-
-while True:
-    print('\n\n1.\tUpdate salah satu\n2.\tUpdate semua')
-    pilihan = int(input('-> '));
-    if pilihan == 1:
-        print('\nEsp dengan nomor urut berapa 1 - 99?')
-        urutan = int(input('-> '))
-        mqtt_payload = f"ESP-{urutan}"
+def clear():
+    if platform.system() == 'Windows':
+        os.system('cls')
     else:
-        mqtt_payload = "ESP-ALL"
-    client.publish(mqtt_topic, mqtt_payload)
-    print("Pesan terkirim: " + mqtt_payload)
-    for i in range(8):
-        print('.', end='')
-        sys.stdout.flush()
-        time.sleep(0.25)
-    print()
+        os.system('clear')
+
+class Klien():
+    def __init__(self):
+        self.mqtt_server = "mqtt.eclipseprojects.io"
+        self.client = mqtt.Client(f"Klien-{random.randint(1, 999)}")
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.client.on_unsubscribe = self.on_unsubscribe
+        self.onESP = []
+
+    def on_connect(self, client, userdata, flags, rc):
+        print("Terhubung dengan server MQTT")
+        
+    def on_message(self, client, userdata, msg):
+        pesan = str(msg.payload.decode('utf-8'))
+        if msg.topic == "klien_cekESP":
+            print(".", end=" ")
+            sys.stdout.flush()
+            self.onESP.append(pesan)
+
+    def on_unsubscribe(self, client, userdata, mid):
+        print("Unsubscribed from topic")
+
+    def set_timeout(sefl, func, sec):
+        t = threading.Timer(sec, func)
+        t.start()
+
+    def cekESP(self):
+        topic = "cekESP"
+        payload = "cek"
+        self.onESP.clear()
+        self.client.subscribe("klien_cekESP")
+        self.client.publish(topic, payload)
+        clear()
+        print("memuat ESP")
+        self.set_timeout(self.menu, 3)
+
+    def menu(self):
+        clear()
+        print(f"\n{self.onESP}")
+        print("1. Cek ESP yang aktif dan terhubung dengan MQTT\n0. Keluar")
+        pilih = int(input())
+        if pilih == 1:
+            self.cekESP()
+        elif pilih == 0:
+            sys.exit()
+        
+    def run(self):
+        self.client.connect(self.mqtt_server, 1883, 60)
+        print("Membangun koneksi dengan MQTT ...")
+        self.client.loop_start()
+        self.set_timeout(self.menu, 3)
+
+if __name__ == "__main__":
+    klien = Klien()
+    klien.run()
