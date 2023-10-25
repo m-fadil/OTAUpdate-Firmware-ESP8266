@@ -1,6 +1,14 @@
 import paho.mqtt.client as mqtt
 import random
 import time
+import os
+import platform
+
+def clear():
+    if platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')
 
 class TempMqtt():
     def __init__(self) -> None:
@@ -15,8 +23,9 @@ class TempMqtt():
     # Fungsi yang akan dipanggil saat koneksi ke broker MQTT berhasil
     def on_connect(self, client, userdata, flags, rc):
         print("Connected with result code " + str(rc))
-        # Berlangganan ke topik "update"
         self.client.subscribe("cekESP")
+        self.client.subscribe(self.ID)
+        clear()
 
     # Fungsi yang akan dipanggil saat pesan diterima dari topik "update"
     def on_message(self, client, userdata, msg):
@@ -28,12 +37,6 @@ class TempMqtt():
     def run(self):
         # Koneksi ke broker MQTT
         self.client.connect(self.broker_address, 1883, 60)
-
-        # Teruskan koneksi ke broker dan menunggu pesan
-        """ timeout = time.time() + 5
-        while time.time() < timeout:
-            client.loop() """
-
         self.client.loop_forever()
 
 if __name__ == "__main__":
