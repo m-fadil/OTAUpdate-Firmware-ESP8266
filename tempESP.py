@@ -33,6 +33,9 @@ class TempMqtt():
         print("Received message on topic '" + msg.topic + "': " + pesan)
         if msg.topic == "cekESP":
             self.client.publish("klien_cekESP", self.ID)
+        elif msg.topic == self.ID:
+            time.sleep(5)
+            self.client.publish("klien_updateTunggal", self.ID)
 
     def run(self):
         # Koneksi ke broker MQTT
