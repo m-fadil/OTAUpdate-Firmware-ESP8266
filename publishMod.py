@@ -18,25 +18,27 @@ mqtt_topic = ["klien_cekESP", "klien_updateTunggal"]
 payload = time.ctime()
 client = mqtt.Client(f"Klien-{random.randint(1, 999)}")
 
-done = False
+done = updated = False
+text = ""
 onESP = []
 
-pesan = ""
-updated = False
 
 def on_connect(client, userdata, flags, rc):
+    global done
     print("\rTerhubung dengan server MQTT")
+    time.sleep(1)
+    done = True
     
 def on_message(client, userdata, msg):
-    global done
+    global done, updated, text
     pesan = str(msg.payload.decode('utf-8'))
     if msg.topic == mqtt_topic[0]:
         print(".", end=" ")
         sys.stdout.flush()
         onESP.append(pesan)
     elif msg.topic == mqtt_topic[1]:
-        done = True
-        result()
+        done = updated = True
+        text = pesan
 
 def on_unsubscribe(client, userdata, mid):
     pass
@@ -45,20 +47,13 @@ def set_timeout(func, sec):
     ti = threading.Timer(sec, func)
     ti.start()
 
-def set_wait(sec):
-    timeout = time.time() + 3
-    def loop():
-        while time.time() < timeout:
-            time.sleep(0.1)
-    th = threading.Thread(target=loop)
-    th.start()
-
-def set_loading():
+def set_loading(method="default", sec=None):
     global done
     def animate():
         global done
+        timeout = time.time() + sec if sec != None else True
         for c in itertools.cycle(["⢿ ", "⣻ ", "⣽ ", "⣾ ", "⣷ ", "⣯ ", "⣟ ", "⡿ "]):
-            if done:
+            if done or (not(time.time() < timeout) and sec != None):
                 break
             sys.stdout.write('\rloading ' + c)
             sys.stdout.flush()
@@ -66,9 +61,19 @@ def set_loading():
     done = False
     th = threading.Thread(target=animate)
     th.start()
+    if method == "join": th.join()
+
+def result():
+    clear()
+    global updated, text
+    if updated:
+        print(f"\rProses update firmware pada {text} berhasil")
+    else:
+        print("gagal update")
+    _ = input("\nTekan ENTER untuk melanjutkan")
+    menu()
 
 def updateTunggal():
-    done = True
     clear()
     for i in range(len(onESP)):
         print(f"{i+1}. {onESP[i]}")
@@ -77,7 +82,7 @@ def updateTunggal():
     try:
         pilih = int(pilih)
     except:
-        print("Masukan harus Angka")
+        print("Masukan harus angka")
         time.sleep(2)
         updateTunggal()
     else:
@@ -87,45 +92,42 @@ def updateTunggal():
             topic = onESP[pilih - 1]
             client.subscribe(mqtt_topic[1])
             client.publish(topic, payload)
-            set_loading()
-            clear()
+            set_loading("join", 7)
+            result()
 
-def result():
-    if updated:
-        print(f"Proses update firmware pada {pesan} berhasil")
-    else:
-        print("gagal")
-    input("Tekan ENTER untuk melanjutkan")
-    menu()
-
-def cekESP(route):
+def cekESP():
     topic = "cekESP"
     onESP.clear()
     client.subscribe(mqtt_topic[0])
     client.publish(topic, payload)
 
 def menu():
+    global done
+    done = True
     clear()
-    # done = True
     client.unsubscribe(mqtt_topic)
-    print("1. Update per-satu ESP\n9. Kembali\n0. Keluar")
-    pilih = int(input("-> "))
-    if pilih == 1:
-        cekESP(pilih)
-        set_timeout(updateTunggal, 3)
-        return
-    elif pilih == 9:
+    print("1. Update per-satu ESP\n0. Keluar")
+    pilih = input("-> ")
+    try:
+        pilih = int(pilih)
+    except:
+        print("Masukan harus angka")
+        time.sleep(2)
         menu()
-    elif pilih == 0:
-        sys.exit()
     else:
-        menu()
+        if pilih == 1:
+            cekESP()
+            set_timeout(updateTunggal, 3)
+        elif pilih == 0:
+            sys.exit()
+        else:
+            menu()
     
 def run():
     print("\rMembangun koneksi dengan MQTT ...")
     client.connect(mqtt_server, 1883, 60)
-    set_timeout(menu, 3)
-    # set_wait(3)
+    set_loading(sec=3)
+    menu()
     client.loop_start()
 
 if __name__ == "__main__":
