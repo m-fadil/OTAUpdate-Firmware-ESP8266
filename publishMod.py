@@ -13,114 +13,123 @@ def clear():
     else:
         os.system('clear')
 
-class Klien():
-    def __init__(self):
-        self.mqtt_server = "mqtt.eclipseprojects.io"
-        self.mqtt_topic = ["klien_cekESP", "klien_updateTunggal"]
-        self.payload = time.ctime()
-        self.client = mqtt.Client(f"Klien-{random.randint(1, 999)}")
-        self.client.on_connect = self.on_connect
-        self.client.on_message = self.on_message
-        self.client.on_unsubscribe = self.on_unsubscribe
+mqtt_server = "mqtt.eclipseprojects.io"
+mqtt_topic = ["klien_cekESP", "klien_updateTunggal"]
+payload = time.ctime()
+client = mqtt.Client(f"Klien-{random.randint(1, 999)}")
 
-        self.done = False
-        self.onESP = []
+done = False
+onESP = []
 
-        self.pesan = ""
-        self.updated = False
+pesan = ""
+updated = False
 
-    def on_connect(self, client, userdata, flags, rc):
-        print("\rTerhubung dengan server MQTT")
-        self.menu()
-        
-    def on_message(self, client, userdata, msg):
-        self.pesan = str(msg.payload.decode('utf-8'))
-        if msg.topic == self.mqtt_topic[0]:
-            print(".", end=" ")
-            sys.stdout.flush()
-            self.onESP.append(self.pesan)
-        elif msg.topic == self.mqtt_topic[1]:
-            self.result()
+def on_connect(client, userdata, flags, rc):
+    print("\rTerhubung dengan server MQTT")
+    
+def on_message(client, userdata, msg):
+    global done
+    pesan = str(msg.payload.decode('utf-8'))
+    if msg.topic == mqtt_topic[0]:
+        print(".", end=" ")
+        sys.stdout.flush()
+        onESP.append(pesan)
+    elif msg.topic == mqtt_topic[1]:
+        done = True
+        result()
 
-    def on_unsubscribe(self, client, userdata, mid):
-        pass
+def on_unsubscribe(client, userdata, mid):
+    pass
 
-    def set_loading(self, func=None, sec=None):
-        self.done = False
-        ti = threading.Timer(sec, func)
-        ti.start()
-        th = threading.Thread(target=self.animate)
-        th.start()
+def set_timeout(func, sec):
+    ti = threading.Timer(sec, func)
+    ti.start()
 
-    def animate(self):
+def set_wait(sec):
+    timeout = time.time() + 3
+    def loop():
+        while time.time() < timeout:
+            time.sleep(0.1)
+    th = threading.Thread(target=loop)
+    th.start()
+
+def set_loading():
+    global done
+    def animate():
+        global done
         for c in itertools.cycle(["⢿ ", "⣻ ", "⣽ ", "⣾ ", "⣷ ", "⣯ ", "⣟ ", "⡿ "]):
-            if self.done:
+            if done:
                 break
             sys.stdout.write('\rloading ' + c)
             sys.stdout.flush()
             time.sleep(0.1)
+    done = False
+    th = threading.Thread(target=animate)
+    th.start()
 
-    def updateTunggal(self):
-        self.done = True
-        clear()
-        for i in range(len(self.onESP)):
-            print(f"{i+1}. {self.onESP[i]}")
-        print("0. Kembali\nMasukkan urutan ESP untuk di update")
-        pilih = input("-> ")
-        try:
-            pilih = int(pilih)
-        except:
-            print("Masukan harus Angka")
-            time.sleep(2)
-            self.updateTunggal()
+def updateTunggal():
+    done = True
+    clear()
+    for i in range(len(onESP)):
+        print(f"{i+1}. {onESP[i]}")
+    print("0. Kembali\nMasukkan urutan ESP untuk di update")
+    pilih = input("-> ")
+    try:
+        pilih = int(pilih)
+    except:
+        print("Masukan harus Angka")
+        time.sleep(2)
+        updateTunggal()
+    else:
+        if pilih == 0:
+            menu()
         else:
-            if pilih == 0:
-                self.menu()
-            else:
-                topic = self.onESP[pilih - 1]
-                self.client.subscribe(self.mqtt_topic[1])
-                self.client.publish(topic, self.payload)
-                self.set_loading(self.result, 8)
-                clear()
+            topic = onESP[pilih - 1]
+            client.subscribe(mqtt_topic[1])
+            client.publish(topic, payload)
+            set_loading()
+            clear()
 
-    def result(self):
-        self.done = True
-        if self.updated:
-            print(f"Proses update firmware pada {self.pesan} berhasil")
-        else:
-            print("gagal")
-        input("Tekan ENTER untuk melanjutkan")
-        self.menu()
+def result():
+    if updated:
+        print(f"Proses update firmware pada {pesan} berhasil")
+    else:
+        print("gagal")
+    input("Tekan ENTER untuk melanjutkan")
+    menu()
 
-    def cekESP(self, route):
-        self.done = True
-        topic = "cekESP"
-        self.onESP.clear()
-        self.client.subscribe(self.mqtt_topic[0])
-        self.client.publish(topic, self.payload)
-        if route == 1:
-            self.set_loading(self.updateTunggal, 3)
-        elif route == 9:
-            self.menu()
-        elif route == 0:
-            sys.exit()
-        else:
-            self.menu()
+def cekESP(route):
+    topic = "cekESP"
+    onESP.clear()
+    client.subscribe(mqtt_topic[0])
+    client.publish(topic, payload)
 
-    def menu(self):
-        clear()
-        # self.done = True
-        self.client.unsubscribe(self.mqtt_topic)
-        print("1. Update per-satu ESP\n9. Kembali\n0. Keluar")
-        pilih = int(input("-> "))
-        self.cekESP(pilih)
-        
-    def run(self):
-        print("\rMembangun koneksi dengan MQTT ...")
-        self.client.connect(self.mqtt_server, 1883, 60)
-        # self.set_loading(self.menu, 3)
-        self.client.loop_forever()
+def menu():
+    clear()
+    # done = True
+    client.unsubscribe(mqtt_topic)
+    print("1. Update per-satu ESP\n9. Kembali\n0. Keluar")
+    pilih = int(input("-> "))
+    if pilih == 1:
+        cekESP(pilih)
+        set_timeout(updateTunggal, 3)
+        return
+    elif pilih == 9:
+        menu()
+    elif pilih == 0:
+        sys.exit()
+    else:
+        menu()
+    
+def run():
+    print("\rMembangun koneksi dengan MQTT ...")
+    client.connect(mqtt_server, 1883, 60)
+    set_timeout(menu, 3)
+    # set_wait(3)
+    client.loop_start()
 
 if __name__ == "__main__":
-    klien = Klien()
-    klien.run()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.on_unsubscribe = on_unsubscribe
+    run()
