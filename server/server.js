@@ -1,27 +1,47 @@
-const express = require('express');
-const { networkInterfaces } = require('os');
-const path = require('path');
- 
-const app = express();
-const nets = networkInterfaces();
- 
-// Server port
-const PORT = 3000;
- 
-app.get('/', (request, response) => response.send('Server on'));
+const express = require("express");
+const multer = require('multer');
+const path = require("path");
+const fs = require("fs")
 
-let downloadCounter = 1;
-app.get('/firmware/httpUpdateNew.bin', (request, response) => {
-    response.download(path.join(__dirname, 'firmware/httpUpdateNew.bin'), 'httpUpdateNew.bin', (err)=>{
+const app = express();
+const PORT = 3000;
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "firmware/");
+    },
+    filename: function (req, file, cb) {
+        cb(null, "FirmwareUpdate.bin");
+    },
+});
+
+const upload = multer({
+    storage: storage,
+    overwrite: true,
+});
+
+app.get("/", (request, response) => response.send("Server on"));
+
+app.post("/upload", upload.single("file"), (req, res) => {
+    const allowedExtensions = [".bin"];
+    const fileExtension = req.file.originalname.split(".").pop();
+
+    if (!allowedExtensions.includes(`.${fileExtension}`)) {
+        fs.unlinkSync(req.file.path);
+
+        return res.status(400).send("Ekstensi file tidak didukung");
+    }
+    res.send("File berhasil diunggah");
+});
+
+app.get("/firmware/firmware_update.bin", (request, response) => {
+    response.download(path.join(__dirname, "firmware/firmware_update.bin"), "firmware_update.bin", (err) => {
         if (err) {
-            console.error("Problem on download firmware: ", err)
-        }else{
-            downloadCounter++;
+            console.error("Problem on download firmware: ", err);
         }
     });
-    console.log('Your file has been downloaded '+downloadCounter+' times!')
-})
- 
+});
+
 app.listen(PORT, () => {
-    console.log('Server download bin menyala!')
+    console.log("Server download bin menyala!");
 });

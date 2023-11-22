@@ -7,11 +7,11 @@
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
 #define mqtt_server "0.tcp.ap.ngrok.io"  //Alamat broker MQTT
-#define mqtt_port 15848
+#define mqtt_port 13944
 #define mqtt_topic_sub "OTAUpdate/esp"
 #define mqtt_topic_pub "OTAUpdate/klien"
 #define espId "ESP-Sensor_Suhu"
-#define FIRMWARE_VERSION "0.3"
+#define FIRMWARE_VERSION "0.2"
 char macAddress[18];
 
 DynamicJsonDocument doc(1024);
@@ -40,6 +40,7 @@ void setup_wifi() {
 
 void publish() {
     doc["espId"] = espId;
+    doc["mac"] = macAddress;
     doc["version"] = FIRMWARE_VERSION;
     JSONPayload = "";
     serializeJson(doc, JSONPayload);
@@ -54,7 +55,7 @@ void update_firmware() {
   publish();
   delay(1000);
 
-  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "10.200.55.231", 3000, "/firmware/httpUpdateNew.bin");
+  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "192.168.1.71", 3000, "/firmware/firmware_update.bin");
 
   switch (ret) {
     case HTTP_UPDATE_FAILED:
@@ -122,7 +123,7 @@ void handling(char* topic, byte* payload, unsigned int length) {
     doc["command"] = "checked";
     publish();
   }
-  else if (message == espId) {
+  else if (message == macAddress) {
     update_firmware();
   }
 }
@@ -161,6 +162,9 @@ void setup() {
 }
 
 void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    setup_wifi();
+  }
   if (!client.connected()) {
     reconnect();
   }
