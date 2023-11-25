@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
         cb(null, "firmware/");
     },
     filename: function (req, file, cb) {
-        cb(null, "FirmwareUpdate.bin");
+        cb(null, "firmware_update.bin");
     },
 });
 

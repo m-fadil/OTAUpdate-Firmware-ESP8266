@@ -8,14 +8,14 @@ import time
 import json
 import os
 
-def clear(text=None):
+def clear(withText=None):
     os.system('cls' if os.name == 'nt' else 'clear')
-    if text != None: print(text)
+    if withText != None: print(withText)
 
 class Klien():
     def __init__(self) -> None:
-        self.mqtt_server = "0.tcp.ap.ngrok.io"
-        self.mqtt_port = 13944
+        self.mqtt_server = "13.215.160.248"
+        self.mqtt_port = 1883
         self.mqtt_topic_sub = "OTAUpdate/klien"
         self.mqtt_topic_pub = "OTAUpdate/esp"
 

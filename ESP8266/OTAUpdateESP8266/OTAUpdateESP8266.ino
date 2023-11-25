@@ -6,12 +6,12 @@
 
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
-#define mqtt_server "0.tcp.ap.ngrok.io"  //Alamat broker MQTT
-#define mqtt_port 13944
+#define mqtt_server "13.215.160.248"  //Alamat broker MQTT
+#define mqtt_port 1883
 #define mqtt_topic_sub "OTAUpdate/esp"
 #define mqtt_topic_pub "OTAUpdate/klien"
 #define espId "ESP-Sensor_Suhu"
-#define FIRMWARE_VERSION "0.2"
+#define FIRMWARE_VERSION "0.1"
 char macAddress[18];
 
 DynamicJsonDocument doc(1024);
