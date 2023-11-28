@@ -3,124 +3,116 @@ from prompt_toolkit.completion import PathCompleter
 import paho.mqtt.client as mqtt
 import keyboard
 import requests
+import solara
 import random
 import time
 import json
 import os
 
-def clear(withText=None):
-    os.system('cls' if os.name == 'nt' else 'clear')
-    if withText != None: print(withText)
-
 class Klien():
     def __init__(self) -> None:
-        self.mqtt_server = "13.215.160.248"
+        self.mqtt_server = "172.29.192.1"
         self.mqtt_port = 1883
         self.mqtt_topic_sub = "OTAUpdate/klien"
         self.mqtt_topic_pub = "OTAUpdate/esp"
 
-        self.client = mqtt.Client(f"Klien-{random.randint(1, 999)}")
+        self.client = mqtt.Client(f"Klien")
         self.client.on_connect = self.on_connect
+        self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
 
-        self.espList = []
+        self.esp_list = []
 
     def on_connect(self, client, userdata, flags, rc):
         print("Terhubung dengan server MQTT")
         self.client.subscribe(self.mqtt_topic_sub)
         
     def on_message(self, client, userdata, message):
-        pesan = str(message.payload.decode("utf-8"))
-        self.handle_message(pesan)
+        msg = str(message.payload.decode("utf-8"))
 
-    def cek_esp(self, route):
-        self.espList.clear()
-        self.client.publish(self.mqtt_topic_pub, "check")
-        time.sleep(1.5)
-        route()
-
-    def uplaod_firmware(self, index):
-        clear()
-        print("[b] Kembali")
-        completer = PathCompleter()
-        file_path = prompt("\nMasukkan file path firmware: ", completer=completer)
-        if file_path.lower() in ["b", ""]:
-            pass
-        else:
-            try:
-                clear()
-                print("Loading...", end="\r", flush=True)
-                respons = requests.post('http://192.168.1.71:3000/upload', files={'file': open(file_path, 'rb')})
-                if respons.status_code == 200:
-                    for idx in index:
-                        self.client.publish(self.mqtt_topic_pub, self.espList[idx - 1]["mac"])
-                    self.update_status()
-                elif respons.status_code == 400:
-                    input(f"Error: {respons.text}\n\nTekan ENTER untuk melanjutkan") # Diubah dengan status kode dan pesan dari server  
-                else:
-                    input("Erorr tidak diketahui\n\nTekan ENTER untuk melanjutkan") # Diubah dengan status kode dan pesan dari server  
-            except:
-                input("Terjadi kesalahan pada server\n\nTekan ENTER untuk melanjutkan")            
-
-    def update_status(self):
-        tick = time.time()
-        while True:
-            if time.time() >= tick:
-                clear()
-                for i, esp in enumerate(self.espList):
-                    if "progress" in esp:
-                        print(f"{i + 1}. {esp["espId"]} [{esp["progress"]}]")
-                print("\nTekan ESCAPE untuk kembali")
-                tick += 0.25
-            if keyboard.is_pressed("escape"): break
-
-    def menu(self):
-        clear()
-        for index, esp in enumerate(self.espList):
-            print(f"{index + 1}. {esp["espId"]:<15} version: {esp["version"]:<4} ({esp["mac"]})")
-        inp = input("\n[c] Cek status update\n[r] Muat ulang\n[q] Keluar\n\nMasukkan urutan ESP untuk di update\n-> ")
-        if inp.lower() == "r":
-            clear("Memuat ulang ..")
-            self.cek_esp(self.menu)
-        elif inp.lower() == "c":
-            self.update_status()
-        elif inp.lower() == "q":
-            exit(0)
-        else:
-            try:
-                index = [int(element) for element in "".join(inp.split(" ")).split(",")]
-            except ValueError as e:
-                print(f"Error: {e}. Pastikan semua elemen adalah integer.")
-            else:
-                self.uplaod_firmware(index)
-        self.menu()
-        
-    def handle_message(self, message):
-        pesan = json.loads(message)
-        if pesan["command"] == "checked":
-            self.espList.append({
-                "espId": pesan["espId"],
-                "version": pesan["version"],
-                "mac": pesan["mac"],
+        pesan = json.loads(msg)
+        if pesan['command'] == 'checked':
+            self.esp_list.append({
+                'espId': pesan['espId'],
+                'mac': pesan['mac'],
+                'version': pesan['version'],
             })
-        elif pesan["command"] == "update":
-            for esp in self.espList:
-                if esp["espId"] == pesan["espId"] and esp["mac"] == pesan["mac"]:
-                    esp["version"] = pesan["version"]
-                    esp["progress"] = pesan["progress"]
+        elif pesan['command'] == 'update':
+            for esp in self.esp_list:
+                if esp['espId'] == pesan['espId']:
+                    esp['version'] = pesan['version']
+                    esp['progress'] = pesan['progress']
+
+    def on_disconnect(self, client, userdata, rc):
+        print("disconnect dengan server MQTT")
+        self.client.loop_stop()
 
     def start(self):
         print("Membangun koneksi dengan MQTT ...")
         self.client.connect(self.mqtt_server, self.mqtt_port, 60)
         self.client.loop_start()
-        try:
-            while not self.client.is_connected():
-                pass
-            self.cek_esp(self.menu)
-        except KeyboardInterrupt:
-            exit(0)
         
+app = Klien()
+app.start()
 
-if __name__ == "__main__":
-    klien = Klien()
-    klien.start()
+updating = solara.reactive(False)
+esp_list = solara.reactive([])
+checked_esp = solara.reactive([])
+
+@solara.component
+def page():
+    solara.AppBarTitle("OTA Update Firmware ESP8266")
+    
+    if updating.value:
+        updating_esp()
+    else:
+        listing_esp()
+    
+
+@solara.component
+def listing_esp():
+    click, use_click = solara.use_state(1)
+
+    def cek_esp():
+        app.esp_list.clear()
+        app.client.publish(app.mqtt_topic_pub, "check")
+        time.sleep(2)
+        esp_list.set(app.esp_list)
+        return esp_list.value
+
+    def update_esp(command="single"):
+        if command == "all":
+            checked_esp.set([esp["espId"] for esp in esp_list.value])
+        updating.set(True)
+
+    result = solara.use_thread(cek_esp, dependencies=[click])
+
+    if result.state == solara.ResultState.FINISHED:
+        with solara.Row():
+            solara.Button("Refresh", on_click=lambda: use_click(not click))
+        with solara.Card("List ESP"):
+            solara.SelectMultiple("Pilih ESP",checked_esp , [esp["espId"] for esp in result.value])
+            solara.Markdown(f"**Selected**: {', '.join(str(x) for x in checked_esp.value)}")
+        with solara.Row(gap="12px", justify="end"):
+            if len(checked_esp.value) != 0:
+                solara.Button("Update", on_click=update_esp, color="primary")
+            solara.Button("Update All", on_click=lambda: update_esp("all"), color="warning")
+
+
+    elif result.state == solara.ResultState.ERROR:
+        solara.Error(f"Error occurred: {result.error}")
+
+    else:
+        solara.Info(f"Running... (status = {result.state})")
+        solara.ProgressLinear(True)
+
+@solara.component
+def updating_esp():
+    for esp_id in checked_esp.value:
+        app.client.publish(f"{app.mqtt_topic_pub}/{next(esp["mac"] for esp in esp_list.value if esp["espId"] == esp_id)}", "start")
+        with solara.Card(f"Updating {esp_id}..."):
+            
+            solara.Text(str([listed["espId"] for listed in esp_list.value if listed["espId"] == esp_id]))
+            solara.ProgressLinear(True)
+
+    solara.Button("Main menu", on_click=lambda: updating.set(not updating.value))

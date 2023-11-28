@@ -6,7 +6,7 @@
 
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
-#define mqtt_server "13.215.160.248"  //Alamat broker MQTT
+#define mqtt_server "13.215.160.248"
 #define mqtt_port 1883
 #define mqtt_topic_sub "OTAUpdate/esp"
 #define mqtt_topic_pub "OTAUpdate/klien"
@@ -39,13 +39,13 @@ void setup_wifi() {
 }
 
 void publish() {
-    doc["espId"] = espId;
-    doc["mac"] = macAddress;
-    doc["version"] = FIRMWARE_VERSION;
-    JSONPayload = "";
-    serializeJson(doc, JSONPayload);
-    client.publish(mqtt_topic_pub, JSONPayload.c_str());
-    doc.clear();
+  doc["espId"] = espId;
+  doc["mac"] = macAddress;
+  doc["version"] = FIRMWARE_VERSION;
+  JSONPayload = "";
+  serializeJson(doc, JSONPayload);
+  client.publish(mqtt_topic_pub, JSONPayload.c_str());
+  doc.clear();
 }
 
 void update_firmware() {
@@ -158,7 +158,7 @@ void setup() {
   ESPhttpUpdate.onEnd(update_finished);
   ESPhttpUpdate.onProgress(update_progress);
   ESPhttpUpdate.onError(update_error);
-  ESPhttpUpdate.rebootOnUpdate(false); // remove automatic update
+  ESPhttpUpdate.rebootOnUpdate(false);
 }
 
 void loop() {
