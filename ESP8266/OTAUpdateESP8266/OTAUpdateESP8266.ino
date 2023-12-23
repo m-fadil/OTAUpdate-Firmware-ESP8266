@@ -6,13 +6,16 @@
 
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
-#define mqtt_server "13.215.160.248"  //Alamat broker MQTT
+#define mqtt_server "<server>"
 #define mqtt_port 1883
 #define mqtt_topic_sub "OTAUpdate/esp"
 #define mqtt_topic_pub "OTAUpdate/klien"
 #define espId "ESP-Sensor_Suhu"
 #define FIRMWARE_VERSION "0.1"
+#define LED_1 2
+#define LED_2 16
 char macAddress[18];
+char mqtt_self_topic_sub[35];
 
 DynamicJsonDocument doc(1024);
 String JSONPayload;
@@ -22,8 +25,7 @@ PubSubClient client(espClient);
 
 void setup_wifi() {
   WiFi.mode(WIFI_STA);
-  delay(10);
-  Serial.println();
+  delay(20);
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
@@ -31,21 +33,21 @@ void setup_wifi() {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("");
-  Serial.println("WiFi connected");
+  Serial.println("\nWiFi connected");
   uint8_t mac[6];
   WiFi.macAddress(mac);
   sprintf(macAddress, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  sprintf(mqtt_self_topic_sub, "%s/%s", mqtt_topic_sub, macAddress);
 }
 
 void publish() {
-    doc["espId"] = espId;
-    doc["mac"] = macAddress;
-    doc["version"] = FIRMWARE_VERSION;
-    JSONPayload = "";
-    serializeJson(doc, JSONPayload);
-    client.publish(mqtt_topic_pub, JSONPayload.c_str());
-    doc.clear();
+  doc["espId"] = espId;
+  doc["mac"] = macAddress;
+  doc["version"] = FIRMWARE_VERSION;
+  JSONPayload = "";
+  serializeJson(doc, JSONPayload);
+  client.publish(mqtt_topic_pub, JSONPayload.c_str());
+  doc.clear();
 }
 
 void update_firmware() {
@@ -55,7 +57,7 @@ void update_firmware() {
   publish();
   delay(1000);
 
-  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "192.168.1.71", 3000, "/firmware/firmware_update.bin");
+  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "<server>", 3000, "/firmware/firmware_update.bin");
 
   switch (ret) {
     case HTTP_UPDATE_FAILED:
@@ -119,12 +121,16 @@ void handling(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println(message);
 
-  if (message == "check") {
-    doc["command"] = "checked";
-    publish();
+  if (String(topic) == mqtt_topic_sub) {
+    if (message == "check") {
+      doc["command"] = "checked";
+      publish();
+    }
   }
-  else if (message == macAddress) {
-    update_firmware();
+  else if (String(topic) == mqtt_self_topic_sub) {
+    if (message == "start") {
+      update_firmware();
+    }
   }
 }
 
@@ -138,6 +144,7 @@ void reconnect() {
     if (client.connect(macAddress)) {
       Serial.println("connected");
       client.subscribe(mqtt_topic_sub);
+      client.subscribe(mqtt_self_topic_sub);
       status();
     } else {
       Serial.print("failed, rc=");
@@ -150,6 +157,11 @@ void reconnect() {
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("\nESP-ON");
+
+  pinMode(LED_1, OUTPUT);
+  // pinMode(LED_2, OUTPUT);
+
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
@@ -162,12 +174,18 @@ void setup() {
 }
 
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (!client.connected()) {
+      reconnect();
+    }
+  }
+  else {
     setup_wifi();
   }
-  if (!client.connected()) {
-    reconnect();
-  }
-
   client.loop();
+
+  digitalWrite(LED_1, HIGH);
+  delay(500);
+  digitalWrite(LED_1, LOW);
+  delay(500);
 }

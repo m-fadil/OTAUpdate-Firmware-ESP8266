@@ -14,7 +14,7 @@ def clear(withText=None):
 
 class Klien():
     def __init__(self) -> None:
-        self.mqtt_server = "13.215.160.248"
+        self.mqtt_server = "<server>"
         self.mqtt_port = 1883
         self.mqtt_topic_sub = "OTAUpdate/klien"
         self.mqtt_topic_pub = "OTAUpdate/esp"
@@ -50,10 +50,11 @@ class Klien():
             try:
                 clear()
                 print("Loading...", end="\r", flush=True)
-                respons = requests.post('http://192.168.1.71:3000/upload', files={'file': open(file_path, 'rb')})
+                respons = requests.post('http://<server>:3000/upload', files={'file': open(file_path, 'rb')})
                 if respons.status_code == 200:
                     for idx in index:
-                        self.client.publish(self.mqtt_topic_pub, self.espList[idx - 1]["mac"])
+                        topic = f"{self.mqtt_topic_pub}/{self.espList[idx - 1]["mac"]}"
+                        self.client.publish(topic, "start")
                     self.update_status()
                 elif respons.status_code == 400:
                     input(f"Error: {respons.text}\n\nTekan ENTER untuk melanjutkan") # Diubah dengan status kode dan pesan dari server  
@@ -77,13 +78,16 @@ class Klien():
     def menu(self):
         clear()
         for index, esp in enumerate(self.espList):
-            print(f"{index + 1}. {esp["espId"]:<15} version: {esp["version"]:<4} ({esp["mac"]})")
-        inp = input("\n[c] Cek status update\n[r] Muat ulang\n[q] Keluar\n\nMasukkan urutan ESP untuk di update\n-> ")
-        if inp.lower() == "r":
-            clear("Memuat ulang ..")
-            self.cek_esp(self.menu)
+            print(f"{index + 1}. {esp["espId"]:<16} version: {esp["version"]:<4} ({esp["mac"]})")
+        inp = input("\n[a] Update semua\n[c] Cek status update\n[r] Muat ulang\n[q] Keluar\n\nMasukkan urutan ESP untuk di update\n-> ")
+        if inp.lower() == "a":
+            index = [i+1 for i in range(len(self.espList))]
+            self.uplaod_firmware(index)
         elif inp.lower() == "c":
             self.update_status()
+        elif inp.lower() == "r":
+            clear("Memuat ulang ..")
+            self.cek_esp(self.menu)
         elif inp.lower() == "q":
             exit(0)
         else:

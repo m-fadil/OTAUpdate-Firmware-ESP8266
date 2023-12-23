@@ -8,7 +8,7 @@ const PORT = 3000;
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "firmware/");
+        cb(null, "firmware");
     },
     filename: function (req, file, cb) {
         cb(null, "firmware_update.bin");
