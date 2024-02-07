@@ -6,16 +6,21 @@
 
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
-#define mqtt_server "<server>"
+#define mqtt_server "20.2.86.174"
 #define mqtt_port 1883
 #define mqtt_topic_sub "OTAUpdate/esp"
+#define mqtt_topic_sub_all "OTAUpdate/esp/all"
 #define mqtt_topic_pub "OTAUpdate/klien"
 #define espId "ESP-Sensor_Suhu"
-#define FIRMWARE_VERSION "0.1"
+#define FIRMWARE_VERSION "0.3"
 #define LED_1 2
 #define LED_2 16
 char macAddress[18];
 char mqtt_self_topic_sub[35];
+
+unsigned long start_time;
+unsigned long end_time;
+unsigned long update_time;
 
 DynamicJsonDocument doc(1024);
 String JSONPayload;
@@ -25,7 +30,6 @@ PubSubClient client(espClient);
 
 void setup_wifi() {
   WiFi.mode(WIFI_STA);
-  delay(20);
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
@@ -55,9 +59,8 @@ void update_firmware() {
   doc["command"] = "update";
   doc["progress"] = "updating";
   publish();
-  delay(1000);
 
-  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "<server>", 3000, "/firmware/firmware_update.bin");
+  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "20.205.21.101", 3000, "/firmware/firmware_update.bin");
 
   switch (ret) {
     case HTTP_UPDATE_FAILED:
@@ -79,10 +82,12 @@ void update_firmware() {
 
 void update_started() {
   Serial.println("CALLBACK:  HTTP update process started");
+  start_time = millis();
 }
 
 void update_finished() {
   Serial.println("CALLBACK:  HTTP update process finished");
+  end_time = millis();
 }
 
 void update_progress(int cur, int total) {
@@ -95,8 +100,11 @@ void update_error(int err) {
 
 void status() {
   if (doc.containsKey("progress")) {
+    update_time = end_time - start_time;
     doc["command"] = "update";
+    doc["update_time"] = update_time;
     publish();
+    Serial.println("updated");
     delay(1000);
     if (strcmp(doc["progress"], "Success") == 0) {
       ESP.restart();
@@ -144,6 +152,7 @@ void reconnect() {
     if (client.connect(macAddress)) {
       Serial.println("connected");
       client.subscribe(mqtt_topic_sub);
+      client.subscribe(mqtt_topic_sub_all);
       client.subscribe(mqtt_self_topic_sub);
       status();
     } else {
@@ -159,7 +168,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\nESP-ON");
 
-  pinMode(LED_1, OUTPUT);
+  // pinMode(LED_1, OUTPUT);
   // pinMode(LED_2, OUTPUT);
 
   setup_wifi();
@@ -171,6 +180,7 @@ void setup() {
   ESPhttpUpdate.onProgress(update_progress);
   ESPhttpUpdate.onError(update_error);
   ESPhttpUpdate.rebootOnUpdate(false); // remove automatic update
+  ESPhttpUpdate.closeConnectionsOnUpdate(false);
 }
 
 void loop() {
@@ -184,8 +194,8 @@ void loop() {
   }
   client.loop();
 
-  digitalWrite(LED_1, HIGH);
-  delay(500);
-  digitalWrite(LED_1, LOW);
-  delay(500);
+  // digitalWrite(LED_1, HIGH);
+  // delay(500);
+  // digitalWrite(LED_1, LOW);
+  // delay(500);
 }
