@@ -14,7 +14,7 @@ def clear(withText=None):
 
 class Klien():
     def __init__(self) -> None:
-        self.mqtt_server = "<server>"
+        self.mqtt_server = "20.2.86.174"
         self.mqtt_port = 1883
         self.mqtt_topic_sub = "OTAUpdate/klien"
         self.mqtt_topic_pub = "OTAUpdate/esp"
@@ -50,18 +50,24 @@ class Klien():
             try:
                 clear()
                 print("Loading...", end="\r", flush=True)
-                respons = requests.post('http://<server>:3000/upload', files={'file': open(file_path, 'rb')})
+                respons = requests.post('http://20.205.21.101:3000/upload', files={'file': open(file_path, 'rb')})
+            except:
+                input("Terjadi kesalahan pada server\n\nTekan ENTER untuk melanjutkan")            
+            else:
                 if respons.status_code == 200:
-                    for idx in index:
-                        topic = f"{self.mqtt_topic_pub}/{self.espList[idx - 1]["mac"]}"
+                    if index == "all":
+                        topic = f"{self.mqtt_topic_pub}/all"
                         self.client.publish(topic, "start")
+                    else:
+                        for idx in index:
+                            topic = f"{self.mqtt_topic_pub}/{self.espList[idx - 1]["mac"]}"
+                            self.client.publish(topic, "start")
                     self.update_status()
                 elif respons.status_code == 400:
                     input(f"Error: {respons.text}\n\nTekan ENTER untuk melanjutkan") # Diubah dengan status kode dan pesan dari server  
                 else:
                     input("Erorr tidak diketahui\n\nTekan ENTER untuk melanjutkan") # Diubah dengan status kode dan pesan dari server  
-            except:
-                input("Terjadi kesalahan pada server\n\nTekan ENTER untuk melanjutkan")            
+
 
     def update_status(self):
         tick = time.time()
@@ -70,7 +76,7 @@ class Klien():
                 clear()
                 for i, esp in enumerate(self.espList):
                     if "progress" in esp:
-                        print(f"{i + 1}. {esp["espId"]} [{esp["progress"]}]")
+                        print(f"{i + 1}. {esp["espId"]} [{esp["progress"]}] {esp["update_time"] if "update_time" in esp else ""}")
                 print("\nTekan ESCAPE untuk kembali")
                 tick += 0.25
             if keyboard.is_pressed("escape"): break
@@ -112,6 +118,8 @@ class Klien():
                 if esp["espId"] == pesan["espId"] and esp["mac"] == pesan["mac"]:
                     esp["version"] = pesan["version"]
                     esp["progress"] = pesan["progress"]
+                    if "update_time" in pesan:
+                        esp["update_time"] = pesan["update_time"]
 
     def start(self):
         print("Membangun koneksi dengan MQTT ...")
