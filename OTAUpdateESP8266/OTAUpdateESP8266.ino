@@ -6,7 +6,7 @@
 
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
-#define mqtt_server "20.2.86.174"
+#define mqtt_server "172.188.112.220"
 #define mqtt_port 1883
 #define mqtt_topic_sub "OTAUpdate/esp"
 #define mqtt_topic_sub_all "OTAUpdate/esp/all"
@@ -60,7 +60,7 @@ void update_firmware() {
   doc["progress"] = "updating";
   publish();
 
-  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "20.205.21.101", 3000, "/firmware/firmware_update.bin");
+  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "172.188.112.220", 8080, "/firmware/firmware_update.bin");
 
   switch (ret) {
     case HTTP_UPDATE_FAILED:

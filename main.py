@@ -14,7 +14,7 @@ def clear(withText=None):
 
 class Klien():
     def __init__(self) -> None:
-        self.mqtt_server = "20.2.86.174"
+        self.mqtt_server = "172.188.112.220"
         self.mqtt_port = 1883
         self.mqtt_topic_sub = "OTAUpdate/klien"
         self.mqtt_topic_pub = "OTAUpdate/esp"
@@ -50,7 +50,7 @@ class Klien():
             try:
                 clear()
                 print("Loading...", end="\r", flush=True)
-                respons = requests.post('http://20.205.21.101:3000/upload', files={'file': open(file_path, 'rb')})
+                respons = requests.post('http://172.188.112.220:8080/upload', files={'file': open(file_path, 'rb')})
             except:
                 input("Terjadi kesalahan pada server\n\nTekan ENTER untuk melanjutkan")            
             else:
