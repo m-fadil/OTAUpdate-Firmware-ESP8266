@@ -10,11 +10,11 @@ import os
 
 def clear(withText=None):
     os.system('cls' if os.name == 'nt' else 'clear')
-    if withText != None: print(withText)
+    if withText: print(withText)
 
 class Klien():
     def __init__(self) -> None:
-        self.mqtt_server = "172.188.112.220"
+        self.mqtt_server = "4.145.89.184"
         self.mqtt_port = 1883
         self.mqtt_topic_sub = "OTAUpdate/klien"
         self.mqtt_topic_pub = "OTAUpdate/esp"
@@ -50,7 +50,7 @@ class Klien():
             try:
                 clear()
                 print("Loading...", end="\r", flush=True)
-                respons = requests.post('http://172.188.112.220:8080/upload', files={'file': open(file_path, 'rb')})
+                respons = requests.post('http://4.145.89.184:3000/upload', files={'file': open(file_path, 'rb')})
             except:
                 input("Terjadi kesalahan pada server\n\nTekan ENTER untuk melanjutkan")            
             else:
@@ -68,7 +68,6 @@ class Klien():
                 else:
                     input("Erorr tidak diketahui\n\nTekan ENTER untuk melanjutkan") # Diubah dengan status kode dan pesan dari server  
 
-
     def update_status(self):
         tick = time.time()
         while True:
@@ -76,10 +75,12 @@ class Klien():
                 clear()
                 for i, esp in enumerate(self.espList):
                     if "progress" in esp:
-                        print(f"{i + 1}. {esp["espId"]} [{esp["progress"]}] {esp["update_time"] if "update_time" in esp else ""}")
+                        print(f"{i + 1}. {esp["espId"]} [{esp["progress"] if esp["progress"] != None else ""}] {f"Update start: {esp["update_time_start"]}" if esp["update_time_start"] != None else ""} {f"Update end: {esp["update_time_end"]}" if esp["update_time_end"] != None else ""}")
                 print("\nTekan ESCAPE untuk kembali")
                 tick += 0.25
             if keyboard.is_pressed("escape"): break
+        clear("Memuat ulang ..")
+        self.cek_esp(self.menu)
 
     def menu(self):
         clear()
@@ -108,19 +109,12 @@ class Klien():
     def handle_message(self, message):
         pesan = json.loads(message)
         if pesan["command"] == "checked":
-            self.espList.append({
-                "espId": pesan["espId"],
-                "version": pesan["version"],
-                "mac": pesan["mac"],
-            })
+            self.espList.append(pesan)
         elif pesan["command"] == "update":
-            for esp in self.espList:
-                if esp["espId"] == pesan["espId"] and esp["mac"] == pesan["mac"]:
-                    esp["version"] = pesan["version"]
-                    esp["progress"] = pesan["progress"]
-                    if "update_time" in pesan:
-                        esp["update_time"] = pesan["update_time"]
-
+            for index, esp in enumerate(self.espList):
+                if esp["mac"] == pesan["mac"]:
+                    self.espList[index] = pesan
+                    
     def start(self):
         print("Membangun koneksi dengan MQTT ...")
         self.client.connect(self.mqtt_server, self.mqtt_port, 60)

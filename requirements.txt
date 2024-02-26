@@ -1,0 +1,4 @@
+keyboard==0.13.5
+paho-mqtt==1.6.1
+requests==2.31.0
+prompt-toolkit==3.0.43
