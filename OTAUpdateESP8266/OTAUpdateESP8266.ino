@@ -6,21 +6,20 @@
 
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
-#define mqtt_server "172.188.112.220"
+#define mqtt_server "4.145.89.184"
 #define mqtt_port 1883
 #define mqtt_topic_sub "OTAUpdate/esp"
-#define mqtt_topic_sub_all "OTAUpdate/esp/all"
 #define mqtt_topic_pub "OTAUpdate/klien"
 #define espId "ESP-Sensor_Suhu"
 #define FIRMWARE_VERSION "0.3"
 #define LED_1 2
-#define LED_2 16
 char macAddress[18];
 char mqtt_self_topic_sub[35];
 
 unsigned long start_time;
 unsigned long end_time;
 unsigned long update_time;
+unsigned long reconnectMillis = 0;
 
 DynamicJsonDocument doc(1024);
 String JSONPayload;
@@ -30,6 +29,7 @@ PubSubClient client(espClient);
 
 void setup_wifi() {
   WiFi.mode(WIFI_STA);
+  digitalWrite(LED_1, LOW);
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
@@ -38,6 +38,7 @@ void setup_wifi() {
     Serial.print(".");
   }
   Serial.println("\nWiFi connected");
+  digitalWrite(LED_1, HIGH);
   uint8_t mac[6];
   WiFi.macAddress(mac);
   sprintf(macAddress, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -45,13 +46,9 @@ void setup_wifi() {
 }
 
 void publish() {
-  doc["espId"] = espId;
-  doc["mac"] = macAddress;
-  doc["version"] = FIRMWARE_VERSION;
   JSONPayload = "";
   serializeJson(doc, JSONPayload);
   client.publish(mqtt_topic_pub, JSONPayload.c_str());
-  doc.clear();
 }
 
 void update_firmware() {
@@ -60,7 +57,7 @@ void update_firmware() {
   doc["progress"] = "updating";
   publish();
 
-  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "172.188.112.220", 8080, "/firmware/firmware_update.bin");
+  t_httpUpdate_return ret = ESPhttpUpdate.update(espClient, "4.145.89.184", 3000, "/firmware/firmware_update.bin");
 
   switch (ret) {
     case HTTP_UPDATE_FAILED:
@@ -99,7 +96,7 @@ void update_error(int err) {
 }
 
 void status() {
-  if (doc.containsKey("progress")) {
+  if (doc["progress"] != nullptr) {
     update_time = end_time - start_time;
     doc["command"] = "update";
     doc["update_time"] = update_time;
@@ -134,6 +131,9 @@ void handling(char* topic, byte* payload, unsigned int length) {
       doc["command"] = "checked";
       publish();
     }
+    else if (message == "start") {
+      update_firmware();
+    }
   }
   else if (String(topic) == mqtt_self_topic_sub) {
     if (message == "start") {
@@ -146,21 +146,17 @@ void callback(char* topic, byte* payload, unsigned int length) {
   handling(topic, payload, length);
 }
 
-void reconnect() {
-  while (!client.connected()) {
-    Serial.println("Attempting MQTT connection...");
-    if (client.connect(macAddress)) {
-      Serial.println("connected");
-      client.subscribe(mqtt_topic_sub);
-      client.subscribe(mqtt_topic_sub_all);
-      client.subscribe(mqtt_self_topic_sub);
-      status();
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      delay(5000);
-    }
+void reconnect_mqtt() {
+  Serial.println("Attempting MQTT connection...");
+  if (client.connect(macAddress)) {
+    Serial.println("connected");
+    client.subscribe(mqtt_topic_sub);
+    client.subscribe(mqtt_self_topic_sub);
+    status();
+  } else {
+    Serial.print("failed, rc=");
+    Serial.print(client.state());
+    Serial.println(" try again in 5 seconds");
   }
 }
 
@@ -168,8 +164,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\nESP-ON");
 
-  // pinMode(LED_1, OUTPUT);
-  // pinMode(LED_2, OUTPUT);
+  pinMode(LED_1, OUTPUT);
 
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
@@ -179,23 +174,31 @@ void setup() {
   ESPhttpUpdate.onEnd(update_finished);
   ESPhttpUpdate.onProgress(update_progress);
   ESPhttpUpdate.onError(update_error);
-  ESPhttpUpdate.rebootOnUpdate(false); // remove automatic update
+  ESPhttpUpdate.rebootOnUpdate(false);
   ESPhttpUpdate.closeConnectionsOnUpdate(false);
+
+  doc["espId"] = espId;
+  doc["mac"] = macAddress;
+  doc["version"] = FIRMWARE_VERSION;
+  doc["command"] = nullptr;
+  doc["progress"] = nullptr;
+  doc["update_time"] = nullptr;
 }
 
 void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    if (!client.connected()) {
-      reconnect();
-    }
-  }
-  else {
+  unsigned long currentMillis = millis();
+  if (WiFi.status() != WL_CONNECTED) {
     setup_wifi();
+  }
+
+  if (!client.connected() && (currentMillis - reconnectMillis >= 5000)) {
+    reconnect_mqtt();
+    reconnectMillis = currentMillis;
   }
   client.loop();
 
   // digitalWrite(LED_1, HIGH);
-  // delay(500);
+  // delay(1000);
   // digitalWrite(LED_1, LOW);
-  // delay(500);
+  // delay(1000);
 }

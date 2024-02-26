@@ -6,4 +6,6 @@ mosquitto.conf
 node_modules
 coba.py
 gui.py
+drawio
 dump
+mqtt
