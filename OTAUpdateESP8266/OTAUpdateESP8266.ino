@@ -231,6 +231,13 @@ void setup() {
   ESPhttpUpdate.onError(update_error);
   ESPhttpUpdate.rebootOnUpdate(false);
   ESPhttpUpdate.closeConnectionsOnUpdate(false);
+
+  doc["espId"] = espId;
+  doc["mac"] = macAddress;
+  doc["version"] = FIRMWARE_VERSION;
+  doc["command"] = nullptr;
+  doc["progress"] = nullptr;
+  doc["update_time"] = nullptr;
 }
 
 void loop() {
