@@ -18,6 +18,7 @@
 char macAddress[18];
 char mqtt_self_topic_sub[35];
 
+<<<<<<< HEAD
 unsigned long reconnectMillis = 0;
 
 struct DataTime {
@@ -25,6 +26,12 @@ struct DataTime {
   byte minute = 0;
   byte second = 0;
 };
+=======
+unsigned long start_time;
+unsigned long end_time;
+unsigned long update_time;
+unsigned long reconnectMillis = 0;
+>>>>>>> 85e0daa93f479852e15c455f4a2c096a718a104a
 
 DynamicJsonDocument doc(1024);
 String JSONPayload;
@@ -119,6 +126,10 @@ void update_error(int err) {
 
 void status() {
   if (doc["progress"] != nullptr) {
+<<<<<<< HEAD
+=======
+    update_time = end_time - start_time;
+>>>>>>> 85e0daa93f479852e15c455f4a2c096a718a104a
     doc["command"] = "update";
     publish();
     Serial.println("updated");
@@ -185,6 +196,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\nESP-ON");
 
+<<<<<<< HEAD
   doc["espId"] = espId;
   doc["version"] = FIRMWARE_VERSION;
   doc["mac"] = nullptr;
@@ -219,6 +231,8 @@ void setup() {
     Serial.println((ok) ? "commit 0 OK" : "Commit failed");
   }
 
+=======
+>>>>>>> 85e0daa93f479852e15c455f4a2c096a718a104a
   pinMode(LED_1, OUTPUT);
 
   setup_wifi();
@@ -231,6 +245,13 @@ void setup() {
   ESPhttpUpdate.onError(update_error);
   ESPhttpUpdate.rebootOnUpdate(false);
   ESPhttpUpdate.closeConnectionsOnUpdate(false);
+
+  doc["espId"] = espId;
+  doc["mac"] = macAddress;
+  doc["version"] = FIRMWARE_VERSION;
+  doc["command"] = nullptr;
+  doc["progress"] = nullptr;
+  doc["update_time"] = nullptr;
 }
 
 void loop() {
