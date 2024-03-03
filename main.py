@@ -75,7 +75,7 @@ class Klien():
                 clear()
                 for i, esp in enumerate(self.espList):
                     if "progress" in esp:
-                        print(f"{i + 1}. {esp["espId"]} [{esp["progress"] if esp["progress"] != None else ""}] {f"Update start: {esp["update_time_start"]}" if esp["update_time_start"] != None else ""} {f"Update end: {esp["update_time_end"]}" if esp["update_time_end"] != None else ""}")
+                        print(f"{i + 1}. {esp["espId"]} [{esp["progress"] if esp["progress"] != None else ""}]")
                 print("\nTekan ESCAPE untuk kembali")
                 tick += 0.25
             if keyboard.is_pressed("escape"): break
