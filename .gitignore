@@ -7,5 +7,6 @@ node_modules
 coba.py
 gui.py
 drawio
+build
 dump
 mqtt
