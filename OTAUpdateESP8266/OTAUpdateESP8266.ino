@@ -3,36 +3,30 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
 #include <ArduinoJson.h>
-#include <ESP_EEPROM.h>
-#include <RTClib.h>
 
-#define FIRMWARE_VERSION "0.2"
+#define FIRMWARE_VERSION "0.1"
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
 #define mqtt_server "4.145.89.184"
 #define mqtt_port 1883
 #define mqtt_topic_sub "OTAUpdate/esp"
 #define mqtt_topic_pub "OTAUpdate/klien"
-#define espId "ESP-Sensor_Suhu"
+#define espId "ESP-Blip_LED"
 #define LED_1 2
+#define LED_RED 10
 char macAddress[18];
 char mqtt_self_topic_sub[35];
 
 unsigned long reconnectMillis = 0;
+unsigned long LEDMillis = 0;
 
-struct DataTime {
-  byte hour = 0;
-  byte minute = 0;
-  byte second = 0;
-};
+bool led = true;
 
 DynamicJsonDocument doc(1024);
 String JSONPayload;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-
-RTC_DS1307 rtc;
 
 void setup_wifi() {
   WiFi.mode(WIFI_STA);
@@ -52,16 +46,6 @@ void setup_wifi() {
   sprintf(mqtt_self_topic_sub, "%s/%s", mqtt_topic_sub, macAddress);
   
   doc["mac"] = macAddress;
-}
-
-void saveDateTimeToEEPROM(DataTime dataTime) {
-  DateTime now = rtc.now();
-  dataTime.hour = now.hour();
-  dataTime.minute = now.minute();
-  dataTime.second = now.second();
-  EEPROM.put(0, dataTime);
-  boolean ok = EEPROM.commit();
-  Serial.println((ok) ? "commit OK" : "Commit failed");
 }
 
 void publish() {
@@ -100,9 +84,6 @@ void update_firmware() {
 
 void update_started() {
   Serial.println("CALLBACK:  HTTP update process started");
-
-  DataTime startTime;
-  saveDateTimeToEEPROM(startTime);
 }
 
 void update_finished() {
@@ -193,33 +174,8 @@ void setup() {
   doc["update_time_start"] = nullptr;
   doc["update_time_end"] = nullptr;
 
-  if (!rtc.begin()) {
-    Serial.println("Couldn't find RTC");
-    Serial.flush();
-    while (1) delay(10);
-  }
-
-  EEPROM.begin(16);
-  
-  DataTime startTime;
-  EEPROM.get(0, startTime);
-  if (startTime.hour != 0) {
-    DateTime now = rtc.now();
-    String st = String(startTime.hour) + ":" + String(startTime.minute) + ":" + String(startTime.second);
-    String et = String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second());
-    Serial.println("Update start: " + st);
-    Serial.println("Update end: " + et);
-
-    doc["progress"] = "finished";
-    doc["update_time_start"] = st;
-    doc["update_time_end"] = et;
-
-    EEPROM.put(0, 0);
-    boolean ok = EEPROM.commit();
-    Serial.println((ok) ? "commit 0 OK" : "Commit failed");
-  }
-  
   pinMode(LED_1, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
 
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
@@ -231,13 +187,6 @@ void setup() {
   ESPhttpUpdate.onError(update_error);
   ESPhttpUpdate.rebootOnUpdate(false);
   ESPhttpUpdate.closeConnectionsOnUpdate(false);
-
-  doc["espId"] = espId;
-  doc["mac"] = macAddress;
-  doc["version"] = FIRMWARE_VERSION;
-  doc["command"] = nullptr;
-  doc["progress"] = nullptr;
-  doc["update_time"] = nullptr;
 }
 
 void loop() {
@@ -252,8 +201,14 @@ void loop() {
   }
   client.loop();
 
-  // digitalWrite(LED_1, HIGH);
-  // delay(1000);
-  // digitalWrite(LED_1, LOW);
-  // delay(1000);
+  if (currentMillis - LEDMillis >= 3000) {
+    if (led) {
+      digitalWrite(LED_RED, HIGH);
+    } else {
+      digitalWrite(LED_RED, LOW);
+
+    }
+    led = !led;
+    LEDMillis = currentMillis;
+  }
 }
