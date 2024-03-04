@@ -3,7 +3,7 @@
 
 ### ESP C8:C9:A3:57:A2:EA
 
-| No | Base version | Update version | Start Time | End Time |
+| No | Base version | Update version | Start time | End time |
 | --- | --- | --- | --- | --- |
 | 1 | 0.1 | 0.2 | 22:56:10.785 | 22:56:29.041 |
 | 2 | 0.2 | 0.3 | 23:15:20.617 | 23:15:38.005 |
@@ -18,7 +18,7 @@
 
 ### ESP 48:55:19:14:C6:63
 
-| No | Base version | Update version | Start Time | End Time |
+| No | Base version | Update version | Start time | End time |
 | --- | --- | --- | --- | --- |
 | 1 | 0.1 | 0.2 | 22:56:10.785 | 22:56:30.067 |
 | 2 | 0.2 | 0.3 | 23:15:20.616 | 23:15:39.412 |
@@ -33,7 +33,7 @@
 
 ### ESP 48:3F:DA:60:FB:BD
 
-| No | Base version | Update version | Start Time | End Time |
+| No | Base version | Update version | Start time | End time |
 | --- | --- | --- | --- | --- |
 | 1 | 0.1 | 0.2 | 22:56:10.785 | 22:56:29.525 |
 | 1 | 0.1 | 0.2 | 23:15:20.617 | 23:15:37.974 |
