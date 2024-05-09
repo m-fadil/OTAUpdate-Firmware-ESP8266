@@ -4,7 +4,7 @@
 #include <ESP8266httpUpdate.h>
 #include <ArduinoJson.h>
 
-#define FIRMWARE_VERSION "0.1"
+#define FIRMWARE_VERSION "1.0"
 #define ssid "DESKTOP"
 #define password "TmzXgd4Z"
 #define mqtt_server "4.145.89.184"
@@ -12,15 +12,21 @@
 #define mqtt_topic_sub "OTAUpdate/esp"
 #define mqtt_topic_pub "OTAUpdate/klien"
 #define espId "ESP-Blip_LED"
-#define LED_1 2
+#define LED_BLUE 2
 #define LED_RED 10
 char macAddress[18];
 char mqtt_self_topic_sub[35];
 
 unsigned long reconnectMillis = 0;
-unsigned long LEDMillis = 0;
 
-bool led = true;
+unsigned long intervalMillis = 0;
+unsigned long blinkMillis = 0;
+unsigned long calibrate = 0;
+bool ledState = HIGH;
+int interval = 3000;
+int blink = 4;
+int blinkInterval = 100;
+int blinkCount = 0;
 
 DynamicJsonDocument doc(1024);
 String JSONPayload;
@@ -30,7 +36,7 @@ PubSubClient client(espClient);
 
 void setup_wifi() {
   WiFi.mode(WIFI_STA);
-  digitalWrite(LED_1, LOW);
+  digitalWrite(LED_BLUE, LOW);
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
@@ -39,7 +45,7 @@ void setup_wifi() {
     Serial.print(".");
   }
   Serial.println("\nWiFi connected");
-  digitalWrite(LED_1, HIGH);
+  digitalWrite(LED_BLUE, HIGH);
   uint8_t mac[6];
   WiFi.macAddress(mac);
   sprintf(macAddress, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -136,6 +142,13 @@ void handling(char* topic, byte* payload, unsigned int length) {
     else if (message == "start") {
       update_firmware();
     }
+    else if (message == "calibrate") {
+      intervalMillis = 0;
+      blinkMillis = 0;
+      blinkCount = 0;
+      ledState = HIGH;
+      calibrate = millis();
+    }
   }
   else if (String(topic) == mqtt_self_topic_sub) {
     if (message == "start") {
@@ -174,10 +187,9 @@ void setup() {
   doc["update_time_start"] = nullptr;
   doc["update_time_end"] = nullptr;
 
-  pinMode(LED_1, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_RED, OUTPUT);
 
-  setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
   
@@ -189,8 +201,7 @@ void setup() {
   ESPhttpUpdate.closeConnectionsOnUpdate(false);
 }
 
-void loop() {
-  unsigned long currentMillis = millis();
+void socket(unsigned long currentMillis) {
   if (WiFi.status() != WL_CONNECTED) {
     setup_wifi();
   }
@@ -200,15 +211,23 @@ void loop() {
     reconnectMillis = currentMillis;
   }
   client.loop();
+}
 
-  if (currentMillis - LEDMillis >= 3000) {
-    if (led) {
-      digitalWrite(LED_RED, HIGH);
-    } else {
-      digitalWrite(LED_RED, LOW);
-
+void loop() {
+  unsigned long currentMillis = millis() - calibrate;
+  socket(currentMillis);
+  
+  if (currentMillis - intervalMillis <= interval) {
+    if (blinkCount < blink*2 && currentMillis - blinkMillis >= blinkInterval) {
+      digitalWrite(LED_RED, ledState);
+      ledState = !ledState;
+      blinkCount++;
+    blinkMillis = currentMillis;
     }
-    led = !led;
-    LEDMillis = currentMillis;
-  }
+	}
+	else {
+		blinkCount = 0;
+    intervalMillis = currentMillis;
+    digitalWrite(LED_RED, ledState);
+	}
 }
