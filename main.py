@@ -86,15 +86,17 @@ class Klien():
         clear()
         for index, esp in enumerate(self.espList):
             print(f"{index + 1}. {esp["espId"]:<16} version: {esp["version"]:<4} ({esp["mac"]})")
-        inp = input("\n[a] Update semua\n[c] Cek status update\n[r] Muat ulang\n[q] Keluar\n\nMasukkan urutan ESP untuk di update\n-> ")
+        inp = input("\n[a] Update semua\n[s] Cek status update\n[r] Muat ulang\n[c] Kalibrasi\n[q] Keluar\n\nMasukkan urutan ESP untuk di update\n-> ")
         if inp.lower() == "a":
             index = [i+1 for i in range(len(self.espList))]
             self.uplaod_firmware(index)
-        elif inp.lower() == "c":
+        elif inp.lower() == "s":
             self.update_status()
         elif inp.lower() == "r":
             clear("Memuat ulang ..")
             self.cek_esp(self.menu)
+        elif inp.lower() == "c":
+            self.client.publish(self.mqtt_topic_pub, "calibrate")
         elif inp.lower() == "q":
             exit(0)
         else:
